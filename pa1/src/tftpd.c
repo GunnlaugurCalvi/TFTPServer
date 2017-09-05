@@ -36,5 +36,14 @@ int main(int argc, char *argv[])
 	    exit(0);
 	}
 
+	while(1){
+	    ssize_t pack;
+	    pack = recvfrom(socket, buf, 1024, 0, (struct sockaddr *) &client, sizeof(struct sockaddr_in));
+	    if(pack < 0){
+	      //Pakki nadist ekki
+	      //tharf ad returna error
+	      exit(0);
+	    }
+	}
 	return 0;
 }
