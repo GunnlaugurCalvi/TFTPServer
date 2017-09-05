@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 	    portNumber = atoi(argv[1]);
 	}
 	if(argc == 3){
-	    portNumber = 63479;
+	    portNumber = 63479; //Default port Frilla
 	}
 	//Create the socket, check if success
 	if((socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	}
 	//Allocate memory for server
 	memset(&server, 0, sizeof(server));
-	server.sin_family = AF_INET;
+	server.sin_family = AF_INET; //WE ARE FAMI LY
 	server.sin_addr = htonl(INADDR_ANY); //Get long integer, convert to Network byte order
 	server.sin_port = htons(portNumber); //Set port number for server
 	
