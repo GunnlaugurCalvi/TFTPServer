@@ -11,8 +11,8 @@ int main(int argc, char *argv[])
 	int sock;
 	struct sockaddr_in server, client;
 	int portNumber;
-    ssize_t pack;
-    char message[512];
+        ssize_t pack;
+        char message[512];
 	if(argc < 2 ||argc > 3){
 	    return 0;
 	}
@@ -27,6 +27,9 @@ int main(int argc, char *argv[])
 		//close(sock);
 		exit(0);
 	}
+	else{
+		 printf("Socket created");
+	}
 	//Allocate memory for server
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET; //WE ARE FAMI LY
@@ -36,7 +39,10 @@ int main(int argc, char *argv[])
 	//Bind Socket to socket address, exit if fail
 	if(bind(sock, (struct sockaddr *) &server, sizeof(struct sockaddr_in)) < 0){
 	    //close(sock);
-	    exit(0);
+		exit(0);
+	}
+	else{
+		printf("Binded that biiiiiiiiiii");
 	}
 
 	while(1){
@@ -46,11 +52,21 @@ int main(int argc, char *argv[])
 		pack = recvfrom(sock, message, 1024, 0, (struct sockaddr *)&client, &clientlen);
 	    
 		if(pack < 0){
+			printf("Sendin this biiiii no MO");
 	      //Pakki nadist ekki
 	      //tharf ad returna error
-	      exit(0);
-	    }
-	    
-	}
+			exit(0);
+	        }
+	        message[sizeof(pack)-1] = '\0';
+		fprintf(stdout, "Recieved: \n%s\n", message);
+		fflush(stdout);
+	        sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
+	
+		if(pack < 0){
+			printf("I aint sendin this biiii no MO");
+			exit(0);
+		}
+
+        }
 	return 0;
 }
