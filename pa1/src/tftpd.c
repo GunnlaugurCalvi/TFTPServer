@@ -2,6 +2,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +48,8 @@ int main(int argc, char *argv[])
 		fd_set readfds;
 		struct timeval tv;
 		int val;
+		char *clientIP;
+		unsigned short sPort;
 		FD_ZERO(&readfds);
 		FD_SET(sock, &readfds);
 		tv.tv_sec = 5;
@@ -64,24 +67,17 @@ int main(int argc, char *argv[])
 	    
 			pack = recvfrom(sock, message, 1024, 0, (struct sockaddr *)&client, &clientlen);
 			
-		 
-			if(pack < 0){
-				printf("Sendin this biiiii no MO");
-	    		//Pakki nadist ekki
-	    	  	//tharf ad returna error
-				exit(0);
-			}
+		 	
 	        message[pack] = '\0';
 			
-			fprintf(stdout, "Connected: %s\n", message);
+			clientIP = inet_ntoa(client.sin_addr);
+			sPort = ntohs(client.sin_port);
+
+			fprintf(stdout, "file ''  requested from %s : %d \n %s", clientIP, sPort, message);
 					
 			fflush(stdout);
 	        sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
-	
-			if(pack < 0){
-				printf("I aint sendin this biiii no MO");
-				exit(0);
-			}
+					
 		}
 		else{
 			fprintf(stdout, "NO CONNECTION\n");
