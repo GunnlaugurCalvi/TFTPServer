@@ -10,6 +10,8 @@ int main(int argc, char *argv[])
 	int socket;
 	struct sockaddr_in server, client;
 	int portNumber;
+        ssize_t pack;
+        char message[512];
 	if(argc < 2 ||argc > 3){
 	    return 0;
 	}
@@ -38,12 +40,13 @@ int main(int argc, char *argv[])
 
 	while(1){
 	    ssize_t pack;
-	    pack = recvfrom(socket, buf, 1024, 0, (struct sockaddr *) &client, sizeof(struct sockaddr_in));
+	    pack = recvfrom(socket, message, 1024, 0, (struct sockaddr *) &client, sizeof(struct sockaddr_in));
 	    if(pack < 0){
 	      //Pakki nadist ekki
 	      //tharf ad returna error
 	      exit(0);
 	    }
+	    
 	}
 	return 0;
 }
