@@ -8,7 +8,7 @@ LDLIBS =
 .DEFAULT: all
 .PHONY: all
 all: tftpd
-	gcc -02 -Wall -Wextra -Wformat=2 -o tftpd tftpd.c
+	gcc -O2 -Wall -Wextra -Wformat=2 -o tftpd tftpd.c
 clean:
 	rm -f *.o
 

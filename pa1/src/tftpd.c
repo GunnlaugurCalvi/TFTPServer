@@ -5,30 +5,30 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <sys/select.h>
+
 int main(int argc, char *argv[])
 {
 	
 	int sock;
 	struct sockaddr_in server, client;
 	int portNumber;
-        ssize_t pack;
-        char message[512];
+    ssize_t pack;
+    char message[512];
+	printf("%d\n", argc);
 	if(argc < 2 ||argc > 3){
-	    return 0;
+	    printf("Invalid input! \n");
+		return 0;
 	}
 	if(argc == 2){
 	    portNumber = atoi(argv[1]);
-	}
-	if(argc == 3){
-	    portNumber = 63479; //Default port Frilla
+		printf("using portnumber %d\n", portNumber);
 	}
 	//Create the socket, check if success
 	if((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
 		//close(sock);
 		exit(0);
-	}
-	else{
-		 printf("Socket created");
 	}
 	//Allocate memory for server
 	memset(&server, 0, sizeof(server));
@@ -41,32 +41,52 @@ int main(int argc, char *argv[])
 	    //close(sock);
 		exit(0);
 	}
-	else{
-		printf("Binded that biiiiiiiiiii");
-	}
 
 	while(1){
 
-		socklen_t clientlen = sizeof(struct sockaddr_in);
+		fd_set readfds;
+		struct timeval tv;
+		int val;
+		FD_ZERO(&readfds);
+		FD_SET(sock, &readfds);
+		tv.tv_sec = 5;
+		tv.tv_usec = 0;
+		val = select(sock + 1, &readfds, NULL,NULL, &tv);
+
+
+		if(val < 0){
+			perror("ERROR");
+		}
+		else if(val > 0){
+			
+		
+			socklen_t clientlen = sizeof(struct sockaddr_in);
 	    
-		pack = recvfrom(sock, message, 1024, 0, (struct sockaddr *)&client, &clientlen);
-	    
-		if(pack < 0){
-			printf("Sendin this biiiii no MO");
-	      //Pakki nadist ekki
-	      //tharf ad returna error
-			exit(0);
-	        }
+			pack = recvfrom(sock, message, 1024, 0, (struct sockaddr *)&client, &clientlen);
+			
+		 
+			if(pack < 0){
+				printf("Sendin this biiiii no MO");
+	    		//Pakki nadist ekki
+	    	  	//tharf ad returna error
+				exit(0);
+			}
 	        message[sizeof(pack)-1] = '\0';
-		fprintf(stdout, "Recieved: \n%s\n", message);
-		fflush(stdout);
+			
+			fprintf(stdout, "Connected\n");
+			
+			fflush(stdout);
 	        sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
 	
-		if(pack < 0){
-			printf("I aint sendin this biiii no MO");
-			exit(0);
+			if(pack < 0){
+				printf("I aint sendin this biiii no MO");
+				exit(0);
+			}
 		}
-
-        }
+		else{
+			fprintf(stdout, "NO CONNECTION\n");
+			fflush(stdout);
+		}
+	}
 	return 0;
 }
