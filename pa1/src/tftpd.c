@@ -11,14 +11,14 @@ int main(int argc, char *argv[])
 	int socket;
 	struct sockaddr_in server, client;
 	int portNumber;
-	if(argz < 2 ||argz > 3){
+	if(argc < 2 ||argc > 3){
 	    return 0;
 	}
-	if(argz == 2){
+	if(argc == 2){
 	    portNumber = atoi(argv[1]);
 	}
-	if(argz == 3){
-	    portNumber = 
+	if(argc == 3){
+	    portNumber = 63479;
 	}
 	//Create the socket, check if success
 	if((socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
@@ -28,7 +28,14 @@ int main(int argc, char *argv[])
 	//Allocate memory for server
 	memset(&server, 0, sizeof(server));
 	server.sin_family = AF_INET;
-	server.sin_addr
-	server.sin_port = htons(portNumber);
+	server.sin_addr = htonl(INADDR_ANY); //Get long integer, convert to Network byte order
+	server.sin_port = htons(portNumber); //Set port number for server
+	
+	//Bind Socket to socket address, exit if fail
+	if(bind(socket, (struct sockaddr *) &server, sizeof(struct sockaddr_in)) < 0){
+	    close(socket);
+	    exit(0);
+	}
+
 	return 0;
 }
