@@ -71,10 +71,10 @@ int main(int argc, char *argv[])
 	    	  	//tharf ad returna error
 				exit(0);
 			}
-	        message[sizeof(pack)-1] = '\0';
+	        message[pack] = '\0';
 			
-			fprintf(stdout, "Connected\n");
-			
+			fprintf(stdout, "Connected: %s\n", message);
+					
 			fflush(stdout);
 	        sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
 	
