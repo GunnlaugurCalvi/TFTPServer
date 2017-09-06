@@ -49,15 +49,13 @@ int main(int argc, char *argv[])
 		fd_set readfds;
 		struct timeval tv;
 		int val;
-		char *clientIP;
-		unsigned short sPort;
 		FD_ZERO(&readfds);
 		FD_SET(sock, &readfds);
 		tv.tv_sec = 5;
 		tv.tv_usec = 0;
 		val = select(sock + 1, &readfds, NULL,NULL, &tv);
-		clientIP = inet_ntoa(client.sin_addr);
-		sPort = ntohs(client.sin_port);
+		char buf[PATH_MAX + 1];
+
 
 		if(val < 0){
 			perror("ERROR");
@@ -70,18 +68,13 @@ int main(int argc, char *argv[])
 			pack = recvfrom(sock, message, 1024, 0, (struct sockaddr *)&client, &clientlen);
 			
 		 	
-		        message[pack] = '\0';
-			
-			//clientIP = inet_ntoa(client.sin_addr);
-			//sPort = ntohs(client.sin_port);
+	        message[pack] = '\0';
+			char *clientIP = inet_ntoa(client.sin_addr);
+			unsigned short sPort = ntohs(client.sin_port);
 
-			fprintf(stdout, "file '%s'  requested from %s : %d \n %s", &message[2], clientIP, sPort, message);
-			char buf[PATH_MAX + 1];
+			fprintf(stdout, "file '%s' requested from %s:%d\n", &message[2], clientIP, sPort);
 			char *res = realpath(&message[2], buf);
-			if(res){
-				fprintf(stdout, "Full path: '%s' \n", buf);
-			}
-			else{
+			if(!res){		
 				perror("realpath");
 				exit(EXIT_FAILURE);				
 			}
