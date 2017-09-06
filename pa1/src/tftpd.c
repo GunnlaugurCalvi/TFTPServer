@@ -10,14 +10,34 @@
 #include <sys/select.h>
 #include <limits.h>
 
+
+struct RRQ{
+	short opC;
+	char fileName[512];
+	short bt;
+	char mode[512];
+};
+struct DATA{
+	short opC;
+	short blockNr;
+	char data[512];
+};
+struct ERROR{
+	short opC;
+	short errC;
+	char errMsg[512];
+};
+
+int packetSender(int socketfd, struct DATA datablock, int byteCount, struct *sockaddr_in, socklen_t len);
+
 int main(int argc, char *argv[])
 {
 	
 	int sock;
 	struct sockaddr_in server, client;
 	int portNumber;
-    ssize_t pack;
-    char message[512];
+	ssize_t pack;
+	char message[512];
 	printf("%d\n", argc);
 	if(argc < 2 ||argc > 3){
 	    printf("Invalid input! \n");
@@ -68,7 +88,7 @@ int main(int argc, char *argv[])
 			pack = recvfrom(sock, message, 1024, 0, (struct sockaddr *)&client, &clientlen);
 			
 		 	
-	        message[pack] = '\0';
+			message[pack] = '\0';
 			char *clientIP = inet_ntoa(client.sin_addr);
 			unsigned short sPort = ntohs(client.sin_port);
 
@@ -81,8 +101,7 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);				
 			}
 			fflush(stdout);
-
-	        sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
+			sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
 			
 			FILE *filep = fopen(buf, "r");
 			if(!filep){
@@ -112,3 +131,9 @@ int main(int argc, char *argv[])
 	}
 	return 0;
 }
+int packetSender(int socketfd, struct DATA datablock, int byteCount, struct *sockaddr_in &clientAddr, socklen_t len){
+	
+	return sendto(socketfd, &datablock, byteCount + 4, 0, (struct sockaddr *) &clientAddr, len);
+
+}
+
