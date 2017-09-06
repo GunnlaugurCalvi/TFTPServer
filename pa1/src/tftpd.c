@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
 		tv.tv_usec = 0;
 		val = select(sock + 1, &readfds, NULL,NULL, &tv);
 		char buf[PATH_MAX + 1];
-
-
+		char fileData[512];
+		int fDataRead = 0;
 		if(val < 0){
 			perror("ERROR");
 		}
@@ -73,20 +73,42 @@ int main(int argc, char *argv[])
 			unsigned short sPort = ntohs(client.sin_port);
 
 			fprintf(stdout, "file '%s' requested from %s:%d\n", &message[2], clientIP, sPort);
+			
 			char *res = realpath(&message[2], buf);
+			//If realpath doesnt exist
 			if(!res){		
 				perror("realpath");
 				exit(EXIT_FAILURE);				
 			}
 			fflush(stdout);
 
-	        	sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
-					
-		}
-		else{
-			fprintf(stdout, "NO CONNECTION\n");
-			fflush(stdout);
-		}
+	        sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
+			
+			FILE *filep = fopen(buf, "r");
+			if(!filep){
+				perror("The file could naaat be opened!!\n");
+			}
+			else{
+				printf("file is being opened that what she said\n");
+				if(1){
+					memset(fileData,0,512);
+					fDataRead = fread(&fileData,1,512,filep);
+				}
+				if((val = sendto(sock, &fileData, (size_t) fDataRead + 4,0, (struct sockaddr *) &client,clientlen) < 0)){
+					perror("filedata sendto() failed like shit brrrr\n");
+					exit(EXIT_FAILURE);
+				} 
+			}
+				fclose(filep);
+			
+			}
+			
+			else{
+				fprintf(stdout, "NO CONNECTION\n");
+				fflush(stdout);
+						
+			}
+		
 	}
 	return 0;
 }
