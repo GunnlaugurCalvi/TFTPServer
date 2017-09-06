@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 	    printf("Invalid input! \n");
 		return 0;
 	}
-	if(argc == 2){
+	if(argc == 2 || argc == 3){
 	    portNumber = atoi(argv[1]);
 		printf("using portnumber %d\n", portNumber);
 	}
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 			clientIP = inet_ntoa(client.sin_addr);
 			sPort = ntohs(client.sin_port);
 
-			fprintf(stdout, "file ''  requested from %s : %d \n %s", clientIP, sPort, message);
+			fprintf(stdout, "file '%s'  requested from %s : %d \n %s", &message[2], clientIP, sPort, message);
 					
 			fflush(stdout);
 	        sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
