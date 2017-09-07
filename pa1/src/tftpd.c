@@ -11,7 +11,7 @@
 #include <limits.h>
 #include <stdbool.h>
 
-#define  FILESIZE  512
+#define FILESIZE 512
 
 struct RRQ{
 	short opC;
@@ -36,6 +36,8 @@ struct ACK{
 
 int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len);
 
+void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]);
+
 int main(int argc, char *argv[])
 {
 	
@@ -52,6 +54,8 @@ int main(int argc, char *argv[])
 	char *res = realpath(dir, buf);
 	char RT [3];
 	char RRQ [] = "RRQ";
+	char fullPath[PATH_MAX];
+	
 	printf("%d\n", argc);
 	if(argc < 2 ||argc > 3){
 	    printf("Invalid input! \n");
@@ -75,11 +79,10 @@ int main(int argc, char *argv[])
 	//Bind Socket to socket address, exit if fail
 	if(bind(sock, (struct sockaddr *) &server, sizeof(struct sockaddr_in)) < 0){
 	    	perror("Bind error");
-		exit(EXIT_FAILURE);
+			exit(EXIT_FAILURE);
 	}
 
 	while(1){
-
 		fd_set readfds;
 		//struct timeval tv;
 		ssize_t val;
@@ -104,8 +107,12 @@ int main(int argc, char *argv[])
 			strncpy(RT, RRQ, sizeof(RRQ));
 			strncpy(request.mode, "octet", sizeof(request.mode));
 		}		
-		 	
-		//message[pack] = '\0';
+		/*printf("im here\n");	 	
+		memset(&fullPath, 0, sizeof(fullPath));
+		concatPath(argv[2], request.fileName, &fullPath[PATH_MAX]);
+		printf("%s", fullPath);
+		*/
+
 		char *clientIP = inet_ntoa(client.sin_addr);
 		unsigned short sPort = ntohs(client.sin_port);
 		fprintf(stdout, "file '%s' requested from %s:%d\n", res, clientIP, sPort);
@@ -176,6 +183,15 @@ int main(int argc, char *argv[])
 	}
 			
 	return 0;
+}
+
+
+void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]){
+	
+	strcpy(fullPath, serverFolder);
+	strcat(fullPath, "/");
+	strcat(fullPath, filePath);
+
 }
 int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len){
 	
