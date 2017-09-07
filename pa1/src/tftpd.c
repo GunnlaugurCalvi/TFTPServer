@@ -28,7 +28,7 @@ struct ERROR{
 	char errMsg[512];
 };
 
-int packetSender(int socketfd, struct DATA datablock, int byteCount, struct *sockaddr_in, socklen_t len);
+int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len);
 
 int main(int argc, char *argv[])
 {
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 		val = select(sock + 1, &readfds, NULL,NULL, &tv);
 		char buf[PATH_MAX + 1];
 		char fileData[512];
-		int fDataRead = 0;
+		//int fDataRead = 0;
 		if(val < 0){
 			perror("ERROR");
 		}
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 			fflush(stdout);
 			sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
 			
-			FILE *filep = fopen(buf, "r");
+			/*FILE *filep = fopen(buf, "r");
 			if(!filep){
 				perror("The file could naaat be opened!!\n");
 			}
@@ -111,29 +111,42 @@ int main(int argc, char *argv[])
 				printf("file is being opened that what she said\n");
 				if(1){
 					memset(fileData,0,512);
-					fDataRead = fread(&fileData,1,512,filep);
-				}
-				if((val = sendto(sock, &fileData, (size_t) fDataRead + 4,0, (struct sockaddr *) &client,clientlen) < 0)){
+					fDataRead = fread(&fileData,512,1,filep);
+			}*/
+			
+			FILE *fp;
+			fp = fopen(buf, "rb");
+			if(fp == NULL){
+				perror("No file error\n");
+			}
+			fseek(fp, 0, SEEK_END);
+			size_t fileSize = ftell(fp);
+			fseek(fp,0,SEEK_SET);
+
+			int bytesread = fread(fileData, fileSize,1,fp);
+			if(bytesread < 0){
+				perror("read file failed\n");
+				exit(EXIT_FAILURE);
+			}
+			if(sendto(sock,&fileData, (size_t) bytesread + 4,0, (struct sockaddr *) &client,clientlen) < 0){
 					perror("filedata sendto() failed like shit brrrr\n");
 					exit(EXIT_FAILURE);
-				} 
-			}
-				fclose(filep);
+			} 
+			fclose(fp);
+		
+		}
 			
-			}
-			
-			else{
-				fprintf(stdout, "NO CONNECTION\n");
-				fflush(stdout);
+		else{
+			fprintf(stdout, "NO CONNECTION\n");
+			fflush(stdout);
 						
-			}
+		}
 		
 	}
 	return 0;
 }
-int packetSender(int socketfd, struct DATA datablock, int byteCount, struct *sockaddr_in &clientAddr, socklen_t len){
+int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len){
 	
 	return sendto(socketfd, &datablock, byteCount + 4, 0, (struct sockaddr *) &clientAddr, len);
-
 }
 
