@@ -27,6 +27,10 @@ struct ERROR{
 	short errC;
 	char errMsg[512];
 };
+struct ACK{
+	short opC;
+	short blockNr;
+};
 
 int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len);
 
@@ -101,6 +105,7 @@ int main(int argc, char *argv[])
 				exit(EXIT_FAILURE);				
 			}
 			fflush(stdout);
+			//packetSender(sock, message, (size_t) pack, &client, clientlen);
 			sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
 			
 			/*FILE *filep = fopen(buf, "r");
@@ -147,6 +152,6 @@ int main(int argc, char *argv[])
 }
 int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len){
 	
-	return sendto(socketfd, &datablock, byteCount + 4, 0, (struct sockaddr *) &clientAddr, len);
+	return sendto(socketfd, &datablock, byteCount, 0, (struct sockaddr *) &clientAddr, len);
 }
 
