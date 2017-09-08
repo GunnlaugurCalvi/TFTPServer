@@ -49,13 +49,12 @@ int main(int argc, char *argv[])
 	struct ACK ack;
 	struct RRQ request;
 	int nextBlock = 1;
-	//char buf[PATH_MAX + 1];
+	char buf[PATH_MAX + 1];
 	char *dir = argv[2];
-	//char *res = realpath(dir, buf);
+	char *res = realpath(dir, buf);
 	char RT [3];
 	char RRQ [] = "RRQ";
 	char fullPath[PATH_MAX];
-	
 	printf("%d\n", argc);
 	if(argc < 2 ||argc > 3){
 	    printf("Invalid input! \n");
@@ -94,14 +93,17 @@ int main(int argc, char *argv[])
 		char fileData[FILESIZE];
 		int fDataRead = 0;
 		bool isReading = true;
-			
+		nextBlock = 1;	
 		
+		memset(&request, 0, sizeof(request));		
 		socklen_t clientlen = (socklen_t) sizeof(client);
-	        //Recieve request from client
+	        
+		//Recieve request from client
 		if((val = recvfrom(sock, (void *) &request, sizeof(request), 0, (struct sockaddr *) &client, &clientlen)) < 0){
 			perror("Request recieve");
 			exit(EXIT_FAILURE);		
 		}
+		 
 		//Get RRQ and mode
 		if(ntohs(request.opC) == 1){
 			printf("do I even get here bro with dis shit -> %d  -> %d\n", request.opC, ntohs(request.opC));
@@ -113,7 +115,7 @@ int main(int argc, char *argv[])
 		concatPath(argv[2], request.fileName, &fullPath[PATH_MAX]);
 		*/
 		memset(&fullPath, 0, sizeof(fullPath));
-		strcpy(fullPath, dir);
+		strcpy(fullPath, res);
 		strcat(fullPath, "/");
 		strcat(fullPath, request.fileName);	
 		char *clientIP = inet_ntoa(client.sin_addr);
@@ -172,6 +174,7 @@ int main(int argc, char *argv[])
 				fflush(stdout);
 				nextBlock++;
 				isReading = true;
+				printf("%d", fDataRead);
 				if(fDataRead < FILESIZE){
 					printf("bout to BREAK\n");
 					fflush(stdout);
