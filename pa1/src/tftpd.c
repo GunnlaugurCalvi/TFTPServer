@@ -36,7 +36,7 @@ struct ACK{
 
 int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len);
 
-void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]);
+//void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]);
 
 int main(int argc, char *argv[])
 {
@@ -49,9 +49,9 @@ int main(int argc, char *argv[])
 	struct ACK ack;
 	struct RRQ request;
 	int nextBlock = 1;
-	char buf[PATH_MAX + 1];
+	//char buf[PATH_MAX + 1];
 	char *dir = argv[2];
-	char *res = realpath(dir, buf);
+	//char *res = realpath(dir, buf);
 	char RT [3];
 	char RRQ [] = "RRQ";
 	char fullPath[PATH_MAX];
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 	}
 
-	while(1){
+	while(true){
 		fd_set readfds;
 		//struct timeval tv;
 		ssize_t val;
@@ -104,81 +104,88 @@ int main(int argc, char *argv[])
 		}
 		//Get RRQ and mode
 		if(ntohs(request.opC) == 1){
+			printf("do I even get here bro with dis shit -> %d  -> %d\n", request.opC, ntohs(request.opC));
+			fflush(stdout);
 			strncpy(RT, RRQ, sizeof(RRQ));
 			strncpy(request.mode, "octet", sizeof(request.mode));
 		}		
 		/*printf("im here\n");	 	
-		memset(&fullPath, 0, sizeof(fullPath));
 		concatPath(argv[2], request.fileName, &fullPath[PATH_MAX]);
-		printf("%s", fullPath);
 		*/
-
+		memset(&fullPath, 0, sizeof(fullPath));
+		strcpy(fullPath, dir);
+		strcat(fullPath, "/");
+		strcat(fullPath, request.fileName);	
 		char *clientIP = inet_ntoa(client.sin_addr);
 		unsigned short sPort = ntohs(client.sin_port);
-		fprintf(stdout, "file '%s' requested from %s:%d\n", res, clientIP, sPort);
+		fprintf(stdout, "file '%s' requested from %s:%d\n", fullPath, clientIP, sPort);
 			
-			//If realpath doesnt exist
-			/*if(!res){		
-				perror("realpath");
-				exit(EXIT_FAILURE);				
-			}*/
 		fflush(stdout);
 			//packetSender(sock, message, (size_t) pack, &client, clientlen);
 			//sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
 			
-		printf("Fyrir File");
+		printf("Fyrir File\n");
 			//Open the requested file
-		FILE *filep = fopen(buf, "rb");
+		FILE *filep = fopen(fullPath, "r");
 		if(!filep){
 			perror("The file could naaat be opened!!\n");
 			
 		}
-			/*if((val = sendto(sock,&fileData, (size_t) fDataRead + 4,0, (struct sockaddr *) &client,clientlen)) < 0){
-					perror("filedata sendto() failed like shit brrrr\n");
-					exit(EXIT_FAILURE);
-			}*/
+
+		char *mode = strchr(request.fileName, '\0') + 1;
 		memset(&data, 0, sizeof(data));
 		memset(&ack, 0, sizeof(ack));
-		printf("Fyrir while");
-			
-		while(1){
-			printf("Seinni while");
+		
+		printf("%s\n%s\n%s\n",(char *)RT, (char *)request.mode, (char *)request.fileName);
+		fflush(stdout);	
+
+		while(true){
+
+			printf("Seinni while\n");
+			fflush(stdout);
 			data.opC = htons(3);
 			data.blockNr = htons(nextBlock);
 			if(isReading){
-				printf("You is Reading");
+				printf("You is Reading\n");
 				memset(data.databuf, 0, FILESIZE);
 				fDataRead = fread(&fileData, 1, FILESIZE, filep);
 			}
 			isReading = false;
-			
+			//send that datablock
 			if((val = sendto(sock, &fileData, (size_t) fDataRead + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("Error in sending file\n");
 				exit(EXIT_FAILURE);
 			}
+
+			//get dat acknowledgement
 			memset(&ack, 0, sizeof(ack));
 			if((val = recvfrom(sock, (void *) &ack, FILESIZE, 0, (struct sockaddr *) &client, &clientlen)) < 0){
 				perror("Error in recieving file\n");
 				exit(EXIT_FAILURE);
 			}
-				
+			ack.blockNr = htons(nextBlock);	
 			ack.opC = ntohs(4);
-			ack.blockNr = ntohs(nextBlock);
-				
-			if(ack.opC == 4 && ack.blockNr == nextBlock){
-
+			ack.blockNr = ntohs(ack.blockNr);
+			printf("%d - %d - %d - %d - %d\n", ack.opC, ack.blockNr, nextBlock,ntohs(ack.opC),ntohs(ack.blockNr));
+			if(ntohs(ack.opC) == 4 && ack.blockNr == nextBlock){
+				printf("im in this ackackack\n");
+				fflush(stdout);
 				nextBlock++;
 				isReading = true;
 				if(fDataRead < FILESIZE){
+					printf("bout to BREAK\n");
+					fflush(stdout);
 					break;
 				}
 			}
 			else if(ack.opC == 5){
-				perror("Error Acknowledgement");
+				perror("Error Acknowledgement\n");
 				break;
 			}
 		}
 		fclose(filep);
+		printf("YOU TIGHT AF\n");
+		fflush(stdout);
 						
 	}
 			
@@ -186,13 +193,13 @@ int main(int argc, char *argv[])
 }
 
 
-void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]){
+/*void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]){
 	
 	strcpy(fullPath, serverFolder);
 	strcat(fullPath, "/");
 	strcat(fullPath, filePath);
 
-}
+}*/
 int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len){
 	
 	return sendto(socketfd, &datablock, byteCount, 0, (struct sockaddr *) &clientAddr, len);
