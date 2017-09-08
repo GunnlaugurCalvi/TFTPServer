@@ -34,7 +34,6 @@ struct ACK{
 	short blockNr;
 };
 
-int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len);
 
 //void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]);
 
@@ -44,7 +43,6 @@ int main(int argc, char *argv[])
 	int sock;
 	struct sockaddr_in server, client;
 	int portNumber;
-	//ssize_t pack;
 	struct DATA data;
 	struct ACK ack;
 	struct RRQ request;
@@ -55,7 +53,9 @@ int main(int argc, char *argv[])
 	char RT [3];
 	char RRQ [] = "RRQ";
 	char fullPath[PATH_MAX];
+	//DEBUG PRINT
 	printf("%d\n", argc);
+	
 	if(argc < 2 ||argc > 3){
 	    printf("Invalid input! \n");
 		return 0;
@@ -83,13 +83,9 @@ int main(int argc, char *argv[])
 
 	while(true){
 		fd_set readfds;
-		//struct timeval tv;
 		ssize_t val;
 		FD_ZERO(&readfds);
 		FD_SET(sock, &readfds);
-		//tv.tv_sec = 5;
-		//tv.tv_usec = 0;
-		//val = select(sock + 1, &readfds, NULL,NULL, &tv);
 		int fDataRead = 0;
 		bool isReading = true;
 		nextBlock = 1;	
@@ -110,9 +106,6 @@ int main(int argc, char *argv[])
 			strncpy(RT, RRQ, sizeof(RRQ));
 			strncpy(request.mode, "octet", sizeof(request.mode));
 		}		
-		/*printf("im here\n");	 	
-		concatPath(argv[2], request.fileName, &fullPath[PATH_MAX]);
-		*/
 		memset(&fullPath, 0, sizeof(fullPath));
 		strcpy(fullPath, res);
 		strcat(fullPath, "/");
@@ -122,8 +115,6 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "file '%s' requested from %s:%d\n", fullPath, clientIP, sPort);
 			
 		fflush(stdout);
-			//packetSender(sock, message, (size_t) pack, &client, clientlen);
-			//sendto(sock, message, (size_t) pack, 0, (struct sockaddr *)&client, clientlen);
 			
 		printf("Fyrir File\n");
 			//Open the requested file
@@ -201,8 +192,4 @@ int main(int argc, char *argv[])
 	strcat(fullPath, filePath);
 
 }*/
-int packetSender(int socketfd, struct DATA datablock, int byteCount, struct sockaddr_in *clientAddr, socklen_t len){
-	
-	return sendto(socketfd, &datablock, byteCount, 0, (struct sockaddr *) &clientAddr, len);
-}
 
