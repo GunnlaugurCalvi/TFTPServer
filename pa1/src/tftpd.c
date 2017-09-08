@@ -90,7 +90,6 @@ int main(int argc, char *argv[])
 		//tv.tv_sec = 5;
 		//tv.tv_usec = 0;
 		//val = select(sock + 1, &readfds, NULL,NULL, &tv);
-		char fileData[FILESIZE];
 		int fDataRead = 0;
 		bool isReading = true;
 		nextBlock = 1;	
@@ -128,13 +127,12 @@ int main(int argc, char *argv[])
 			
 		printf("Fyrir File\n");
 			//Open the requested file
-		FILE *filep = fopen(fullPath, "r");
+		FILE *filep = fopen(fullPath, "rb");
 		if(!filep){
 			perror("The file could naaat be opened!!\n");
 			
 		}
 
-		char *mode = strchr(request.fileName, '\0') + 1;
 		memset(&data, 0, sizeof(data));
 		memset(&ack, 0, sizeof(ack));
 		
