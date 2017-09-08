@@ -150,11 +150,11 @@ int main(int argc, char *argv[])
 			if(isReading){
 				printf("You is Reading\n");
 				memset(data.databuf, 0, FILESIZE);
-				fDataRead = fread(&fileData, 1, FILESIZE, filep);
+				fDataRead = fread(&data.databuf, 1, FILESIZE, filep);
 			}
 			isReading = false;
 			//send that datablock
-			if((val = sendto(sock, &fileData, (size_t) fDataRead + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+			if((val = sendto(sock, &data, (size_t) fDataRead + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("Error in sending file\n");
 				exit(EXIT_FAILURE);
 			}
