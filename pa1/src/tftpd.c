@@ -89,6 +89,9 @@ int main(int argc, char *argv[])
 			perror("Request recieve");
 			exit(EXIT_FAILURE);		
 		}
+		printf("%d\n%d", request.opC, ntohs(request.opC));
+		fflush(stdout);
+	
 		 
 		//Get RRQ and mode
 		if(ntohs(request.opC) == 1){
@@ -101,6 +104,7 @@ int main(int argc, char *argv[])
 		{
 			perror("Illegal REQUEST ");
 			fflush(stdout);
+			break;
 		}	
 		memset(&fullPath, 0, sizeof(fullPath));
 		strcpy(fullPath, res);
