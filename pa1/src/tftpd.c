@@ -6,7 +6,6 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/time.h>
 #include <limits.h>
 #include <stdbool.h>
 
@@ -33,9 +32,6 @@ struct ACK{
 	short blockNr;
 };
 
-
-//void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]);
-
 int main(int argc, char *argv[])
 {
 	
@@ -54,8 +50,6 @@ int main(int argc, char *argv[])
 	char fullPath[PATH_MAX];
 	bool isReading = true;
 	
-	//DEBUG PRINT
-	printf("%d\n", argc);
 	
 	if(argc != 3){
 	    printf("Invalid input! \n");
@@ -103,26 +97,26 @@ int main(int argc, char *argv[])
 			strncpy(RT, RRQ, sizeof(RRQ));
 			strncpy(request.mode, "octet", sizeof(request.mode));
 		}
-		else
+		else if(ntohs(request.opC) != 1)
 		{
-			perror("REQUEST OPCODE ERROR!");
+			perror("Illegal REQUEST ");
 			fflush(stdout);
 		}	
 		memset(&fullPath, 0, sizeof(fullPath));
 		strcpy(fullPath, res);
 		strcat(fullPath, "/");
 		strcat(fullPath, request.fileName);	
+		
 		char *clientIP = inet_ntoa(client.sin_addr);
 		unsigned short sPort = ntohs(client.sin_port);
-		fprintf(stdout, "file '%s' requested from %s:%d\n", fullPath, clientIP, sPort);
+		fprintf(stdout, "file '%s' requested from %s:%d\n", request.fileName, clientIP, sPort);
 			
 		fflush(stdout);
 			
-		printf("Fyrir File\n");
-			//Open the requested file
+		//Open the requested file
 		FILE *filep = fopen(fullPath, "rb");
 		if(!filep){
-			perror("The file could naaat be opened!!\n");
+			perror("Error in opening file\n");
 			
 		}
 
@@ -133,13 +127,11 @@ int main(int argc, char *argv[])
 		fflush(stdout);	
 
 		while(true){
-
-			printf("Seinni while\n");
 			fflush(stdout);
 			data.opC = htons(3);
 			data.blockNr = htons(nextBlock);
 			if(isReading){
-				printf("You is Reading\n");
+				printf("Reading file\n");
 				memset(data.databuf, 0, FILESIZE);
 				fDataRead = fread(&data.databuf, 1, FILESIZE, filep);
 			}
@@ -161,24 +153,22 @@ int main(int argc, char *argv[])
 			ack.blockNr = ntohs(ack.blockNr);
 			printf("%d - %d - %d - %d - %d\n", ack.opC, ack.blockNr, nextBlock,ntohs(ack.opC),ntohs(ack.blockNr));
 			if(ntohs(ack.opC) == 4 && ack.blockNr == nextBlock){
-				printf("im in this ackackack\n");
 				fflush(stdout);
 				nextBlock++;
 				isReading = true;
 				printf("%d", fDataRead);
 				if(fDataRead < FILESIZE){
-					printf("bout to BREAK\n");
 					fflush(stdout);
 					break;
 				}
 			}
-			else if(ack.opC == 5){
-				perror("Error Acknowledgement\n");
+			else if(ntohs(ack.opC) != 4 || ack.blockNr != nextBlock){
+				perror("Acknowledgement error\n");
 				break;
 			}
 		}
 		fclose(filep);
-		printf("YOU TIGHT AF\n");
+		printf("File sent to %s:%d!\n", clientIP, sPort);
 		fflush(stdout);
 						
 	}
@@ -186,12 +176,4 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-
-/*void concatPath(char *serverFolder, char *filePath, char fullPath[PATH_MAX]){
-	
-	strcpy(fullPath, serverFolder);
-	strcat(fullPath, "/");
-	strcat(fullPath, filePath);
-
-}*/
 
