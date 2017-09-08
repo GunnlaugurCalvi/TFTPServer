@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include <sys/select.h>
 #include <limits.h>
 #include <stdbool.h>
 
@@ -53,14 +52,16 @@ int main(int argc, char *argv[])
 	char RT [3];
 	char RRQ [] = "RRQ";
 	char fullPath[PATH_MAX];
+	bool isReading = true;
+	
 	//DEBUG PRINT
 	printf("%d\n", argc);
 	
-	if(argc < 2 ||argc > 3){
+	if(argc != 3){
 	    printf("Invalid input! \n");
 		return 0;
 	}
-	if(argc == 2 || argc == 3){
+	if(argc == 3){
 	    portNumber = atoi(argv[1]);
 		printf("using portnumber %d\n", portNumber);
 	}
@@ -82,12 +83,8 @@ int main(int argc, char *argv[])
 	}
 
 	while(true){
-		fd_set readfds;
 		ssize_t val;
-		FD_ZERO(&readfds);
-		FD_SET(sock, &readfds);
 		int fDataRead = 0;
-		bool isReading = true;
 		nextBlock = 1;	
 		
 		memset(&request, 0, sizeof(request));		
@@ -105,7 +102,12 @@ int main(int argc, char *argv[])
 			fflush(stdout);
 			strncpy(RT, RRQ, sizeof(RRQ));
 			strncpy(request.mode, "octet", sizeof(request.mode));
-		}		
+		}
+		else
+		{
+			perror("REQUEST OPCODE ERROR!");
+			fflush(stdout);
+		}	
 		memset(&fullPath, 0, sizeof(fullPath));
 		strcpy(fullPath, res);
 		strcat(fullPath, "/");
