@@ -83,22 +83,21 @@ int main(int argc, char *argv[])
 		
 		memset(&request, 0, sizeof(request));		
 		socklen_t clientlen = (socklen_t) sizeof(client);
-	        
+	       
 		//Recieve request from client
 		if((val = recvfrom(sock, (void *) &request, sizeof(request), 0, (struct sockaddr *) &client, &clientlen)) < 0){
 			perror("Request recieve");
 			exit(EXIT_FAILURE);		
 		}
-		printf("%d\n%d", request.opC, ntohs(request.opC));
+		//printf("%d\n%d\n", request.opC, ntohs(request.opC));
 		fflush(stdout);
 	
 		 
 		//Get RRQ and mode
 		if(ntohs(request.opC) == 1){
-			printf("do I even get here bro with dis shit -> %d  -> %d\n", request.opC, ntohs(request.opC));
-			fflush(stdout);
 			strncpy(RT, RRQ, sizeof(RRQ));
-			strncpy(request.mode, "octet", sizeof(request.mode));
+			strncpy(request.mode, strchr(request.fileName, '\0') + 1  , sizeof(request.mode));
+			//printf("after %s\n", request.mode);
 		}
 		else if(ntohs(request.opC) != 1)
 		{
@@ -116,9 +115,19 @@ int main(int argc, char *argv[])
 		fprintf(stdout, "file '%s' requested from %s:%d\n", request.fileName, clientIP, sPort);
 			
 		fflush(stdout);
-			
+		FILE *filep = NULL;
 		//Open the requested file
-		FILE *filep = fopen(fullPath, "rb");
+		if(strcmp(request.mode, "octet") == 0){
+			//printf("octet mode");
+			filep = fopen(fullPath, "rb");
+		}
+		else if(strcmp(request.mode, "netascii") == 0){
+			//printf("netascii mode");
+			filep = fopen(fullPath, "r");
+		}
+		else if(strcmp(request.mode, "mail") == 0){
+			perror("Mail mode not supported");
+		}
 		if(!filep){
 			perror("Error in opening file\n");
 			
@@ -127,7 +136,7 @@ int main(int argc, char *argv[])
 		memset(&data, 0, sizeof(data));
 		memset(&ack, 0, sizeof(ack));
 		
-		printf("%s\n%s\n%s\n",(char *)RT, (char *)request.mode, (char *)request.fileName);
+		//printf("%s\n%s\n%s\n",(char *)RT, (char *)request.mode, (char *)request.fileName);
 		fflush(stdout);	
 
 		while(true){
@@ -135,7 +144,7 @@ int main(int argc, char *argv[])
 			data.opC = htons(3);
 			data.blockNr = htons(nextBlock);
 			if(isReading){
-				printf("Reading file\n");
+				//printf("Reading file\n");
 				memset(data.databuf, 0, FILESIZE);
 				fDataRead = fread(&data.databuf, 1, FILESIZE, filep);
 			}
@@ -155,14 +164,14 @@ int main(int argc, char *argv[])
 			ack.blockNr = htons(nextBlock);	
 			ack.opC = ntohs(4);
 			ack.blockNr = ntohs(ack.blockNr);
-			printf("%d - %d - %d - %d - %d\n", ack.opC, ack.blockNr, nextBlock,ntohs(ack.opC),ntohs(ack.blockNr));
+			//printf("%d - %d - %d - %d - %d\n", ack.opC, ack.blockNr, nextBlock,ntohs(ack.opC),ntohs(ack.blockNr));
 			if(ntohs(ack.opC) == 4 && ack.blockNr == nextBlock){
 				fflush(stdout);
 				nextBlock++;
 				isReading = true;
-				printf("%d", fDataRead);
+				//printf("%d", fDataRead);
 				if(fDataRead < FILESIZE){
-					fflush(stdout);
+					//fflush(stdout);
 					break;
 				}
 			}
