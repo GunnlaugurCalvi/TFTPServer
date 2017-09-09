@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
 				err.opC = htons(5);
 				strcpy(err.errMsg, "Acknowledgement error\n");
 				if((val = sendto(sock, (void *) &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-					perror("Error packet failed to sen");
+					perror("Error packet failed to send");
 				}
 			}
 		}
