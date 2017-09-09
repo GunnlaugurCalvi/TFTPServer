@@ -10,6 +10,14 @@
 #include <stdbool.h>
 
 #define FILESIZE 512
+#define ERROR_NOT_DEFINED 0
+#define ERROR_FILE_NOT_FOUND 1
+#define ERROR_ACCESS_VIOLATION 2
+#define ERROR_DISK_FULL 3
+#define ERROR_ILLEGAL_TFTP_OP 4
+#define ERROR_UNKNOWN_TRANSFER_ID 5
+#define ERROR_FILE_EXISTS 6
+#define ERROR_NO_SUCH_USER 7
 
 struct RRQ{
 	short opC;
@@ -41,6 +49,7 @@ int main(int argc, char *argv[])
 	struct DATA data;
 	struct ACK ack;
 	struct RRQ request;
+	struct ERROR err;
 	int nextBlock = 1;
 	char buf[PATH_MAX + 1];
 	char *dir = argv[2];
@@ -86,12 +95,15 @@ int main(int argc, char *argv[])
 	       
 		//Recieve request from client
 		if((val = recvfrom(sock, (void *) &request, sizeof(request), 0, (struct sockaddr *) &client, &clientlen)) < 0){
-			perror("Request recieve");
-			exit(EXIT_FAILURE);		
+			err.opC = htons(5);
+			err.errC = ERROR_NOT_DEFINED ;
+			strcpy(err.errMsg, "Request failed\n");
+			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+				perror("Error packet failed to send\n");
+			}
 		}
 		//printf("%d\n%d\n", request.opC, ntohs(request.opC));
-		fflush(stdout);
-	
+			
 		 
 		//Get RRQ and mode
 		if(ntohs(request.opC) == 1){
@@ -100,10 +112,14 @@ int main(int argc, char *argv[])
 			//printf("after %s\n", request.mode);
 		}
 		else if(ntohs(request.opC) != 1)
-		{
-			perror("Illegal REQUEST ");
-			fflush(stdout);
-			break;
+		{	
+			err.opC = htons(5);
+			err.errC = ERROR_ILLEGAL_TFTP_OP;
+			strcpy(err.errMsg, "Illegal TFTP operation\n");
+			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+				perror("Error packet failed to send\n");
+			}
+			continue;
 		}	
 		memset(&fullPath, 0, sizeof(fullPath));
 		strcpy(fullPath, res);
@@ -126,11 +142,19 @@ int main(int argc, char *argv[])
 			filep = fopen(fullPath, "r");
 		}
 		else if(strcmp(request.mode, "mail") == 0){
-			perror("Mail mode not supported");
+			err.opC = htons(5);
+			err.errC = ERROR_ILLEGAL_TFTP_OP;
+			strcpy(err.errMsg, "Mail mode not supported\n");
+			if((val = sendto(sock,  &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+				perror("Error packet failed to send\n");
+			}
 		}
 		if(!filep){
-			perror("Error in opening file\n");
-			
+			err.opC = htons(5);
+			strcpy(err.errMsg, "Failed to read file\n"); 
+			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+				perror("Error packet failed to send");
+			} 
 		}
 
 		memset(&data, 0, sizeof(data));
@@ -151,20 +175,26 @@ int main(int argc, char *argv[])
 			isReading = false;
 			//send that datablock
 			if((val = sendto(sock, &data, (size_t) fDataRead + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-				perror("Error in sending file\n");
-				exit(EXIT_FAILURE);
+				err.opC = htons(5);
+				strcpy(err.errMsg, "Failed sending file");
+				if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+					perror("Error packet failed to send");
+				}  	
+				continue;
 			}
 
 			//get dat acknowledgement
 			memset(&ack, 0, sizeof(ack));
 			if((val = recvfrom(sock, (void *) &ack, FILESIZE, 0, (struct sockaddr *) &client, &clientlen)) < 0){
-				perror("Error in recieving file\n");
-				exit(EXIT_FAILURE);
+				err.opC = htons(5);
+				strcpy(err.errMsg, "Acknowledgement error\n");
+				if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+					perror("Error packet failed to send");
+				}
 			}
 			ack.blockNr = htons(nextBlock);	
 			ack.opC = ntohs(4);
 			ack.blockNr = ntohs(ack.blockNr);
-			//printf("%d - %d - %d - %d - %d\n", ack.opC, ack.blockNr, nextBlock,ntohs(ack.opC),ntohs(ack.blockNr));
 			if(ntohs(ack.opC) == 4 && ack.blockNr == nextBlock){
 				fflush(stdout);
 				nextBlock++;
@@ -176,8 +206,11 @@ int main(int argc, char *argv[])
 				}
 			}
 			else if(ntohs(ack.opC) != 4 || ack.blockNr != nextBlock){
-				perror("Acknowledgement error\n");
-				break;
+				err.opC = htons(5);
+				strcpy(err.errMsg, "Acknowledgement error\n");
+				if((val = sendto(sock, (void *) &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+					perror("Error packet failed to sen");
+				}
 			}
 		}
 		fclose(filep);
