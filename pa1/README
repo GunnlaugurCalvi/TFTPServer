@@ -1,1 +1,23 @@
-Update this.
+Explanation and domcumentation of the meaning of mode and how we handle modes in our implementation
+
+The mode of a RRQ or WRQ packet is a string  which the packet carries with it, which tells the sender(in this case, the server), 
+in which format the file should be, that is being transmitted.
+The server uses that information to translate the information in the file accordingly:
+		- In the case of "netascii" the server translates it to 8 bit ascii.
+		- In the case of "octet" the server translates it to raw 8 bit bytes.
+		- The case of "mail" is obsolete in this project and therefore we handle it by returning an error
+
+In our implementation the server recognices all request as if they were netascii, 
+but in the case when client requires it to be an octet(with -m "octet"), the server responds by handling the packet with octet.
+We found that implementing the handling of mode in this way was best, because it is easiest for the server to handle every packet in
+the exact matter of how the client requires.
+
+
+
+
+How our server handles attempts of uploading files:
+
+The implementation of our server only recognices RRQ from the client, in the case where a client request to write, 
+the server responds by returning an error, telling the client that he is unable to send a WRQ.
+We do this by, after the request from the client has been recieved, we check if the opcode of the request packet is equal to 1, 
+an RRQ to be exact, if the opcode is anything else, we assume the client is sending an WRQ and return the error.
