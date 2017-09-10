@@ -9,7 +9,17 @@
 #include <limits.h>
 #include <stdbool.h>
 
+//Define operation code for packets
+#define RRQ_OPC 1
+#define WRQ_OPC 2
+#define DATA_OPC 3
+#define ACK_OPC 4
+#define ERR_OPC 5
+
+//Define size of file to be transmitted everytime
 #define FILESIZE 512
+
+//Define Error codes
 #define ERROR_NOT_DEFINED 0
 #define ERROR_FILE_NOT_FOUND 1
 #define ERROR_ACCESS_VIOLATION 2
@@ -42,7 +52,7 @@ struct ACK{
 
 int main(int argc, char *argv[])
 {
-	
+	//Initialize and declare variables
 	int sock;
 	struct sockaddr_in server, client;
 	int portNumber;
@@ -54,12 +64,11 @@ int main(int argc, char *argv[])
 	char buf[PATH_MAX + 1];
 	char *dir = argv[2];
 	char *res = realpath(dir, buf);
-	char RT [3];
-	char RRQ [] = "RRQ";
 	char fullPath[PATH_MAX];
 	bool isReading = true;
-	
-	
+	FILE *filep = NULL;
+
+	//Check if the input from client is valid
 	if(argc != 3){
 	    printf("Invalid input! \n");
 		return 0;
@@ -89,93 +98,89 @@ int main(int argc, char *argv[])
 		ssize_t val;
 		int fDataRead = 0;
 		nextBlock = 1;	
-		
+		//Allocate memory for request from client
 		memset(&request, 0, sizeof(request));		
 		socklen_t clientlen = (socklen_t) sizeof(client);
 	       
-		//Recieve request from client
+		//Recieve request from client, throw error if it fails
 		if((val = recvfrom(sock, (void *) &request, sizeof(request), 0, (struct sockaddr *) &client, &clientlen)) < 0){
-			err.opC = htons(5);
+			err.opC = htons(ERR_OPC);
 			err.errC = ERROR_NOT_DEFINED ;
 			strcpy(err.errMsg, "Request failed\n");
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("Error packet failed to send\n");
 			}
 		}
-		//printf("%d\n%d\n", request.opC, ntohs(request.opC));
 			
 		 
-		//Get RRQ and mode
-		if(ntohs(request.opC) == 1){
-			strncpy(RT, RRQ, sizeof(RRQ));
+		//Check if request from client is valid, get mode if request is valid, otherwise throw error
+		if(ntohs(request.opC) == RRQ_OPC){
 			strncpy(request.mode, strchr(request.fileName, '\0') + 1  , sizeof(request.mode));
-			//printf("after %s\n", request.mode);
 		}
-		else if(ntohs(request.opC) != 1)
+		else if(ntohs(request.opC) != RRQ_OPC)
 		{	
-			err.opC = htons(5);
+			err.opC = htons(ERR_OPC);
 			err.errC = ERROR_ILLEGAL_TFTP_OP;
 			strcpy(err.errMsg, "Illegal TFTP operation\n");
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("Error packet failed to send\n");
 			}
 			continue;
-		}	
+		}
+		//Allocate memory for fullpath to file, concat fullpath with filename of request from client	
 		memset(&fullPath, 0, sizeof(fullPath));
 		strcpy(fullPath, res);
 		strcat(fullPath, "/");
 		strcat(fullPath, request.fileName);	
 		
+		//Get Ip address of client, and which port the client is using
 		char *clientIP = inet_ntoa(client.sin_addr);
 		unsigned short sPort = ntohs(client.sin_port);
 		fprintf(stdout, "file '%s' requested from %s:%d\n", request.fileName, clientIP, sPort);
-			
 		fflush(stdout);
-		FILE *filep = NULL;
-		//Open the requested file
+
+		//Open the requested file according to what the client requires, throw error if it is "mail"
 		if(strcmp(request.mode, "octet") == 0){
-			//printf("octet mode");
 			filep = fopen(fullPath, "rb");
 		}
 		else if(strcmp(request.mode, "netascii") == 0){
-			//printf("netascii mode");
 			filep = fopen(fullPath, "r");
 		}
 		else if(strcmp(request.mode, "mail") == 0){
-			err.opC = htons(5);
+			err.opC = htons(ERR_OPC);
 			err.errC = ERROR_ILLEGAL_TFTP_OP;
 			strcpy(err.errMsg, "Mail mode not supported\n");
 			if((val = sendto(sock,  &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("Error packet failed to send\n");
 			}
 		}
+		//Check if opening the file was successfull, throw error if not
 		if(!filep){
-			err.opC = htons(5);
+			err.opC = htons(ERR_OPC);
 			strcpy(err.errMsg, "Failed to read file\n"); 
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("Error packet failed to send");
 			} 
 		}
-
+		//Allocate memory for data and acknowledgment packets
 		memset(&data, 0, sizeof(data));
 		memset(&ack, 0, sizeof(ack));
-		
-		//printf("%s\n%s\n%s\n",(char *)RT, (char *)request.mode, (char *)request.fileName);
-		fflush(stdout);	
-
+			
+		//Transfer loop
 		while(true){
-			fflush(stdout);
-			data.opC = htons(3);
+			//Set op code and block number for the data packet
+			data.opC = htons(DATA_OPC);
 			data.blockNr = htons(nextBlock);
+			//Check if the file is still being read for transfer
 			if(isReading){
-				//printf("Reading file\n");
+				//Allocate memory for the pack being transmitted and read into fDataRead
 				memset(data.databuf, 0, FILESIZE);
 				fDataRead = fread(&data.databuf, 1, FILESIZE, filep);
 			}
 			isReading = false;
-			//send that datablock
+			//Send the data packet, throw error if unsuccessfull
 			if((val = sendto(sock, &data, (size_t) fDataRead + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-				err.opC = htons(5);
+				err.opC = htons(ERR_OPC);
 				strcpy(err.errMsg, "Failed sending file");
 				if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 					perror("Error packet failed to send");
@@ -183,36 +188,38 @@ int main(int argc, char *argv[])
 				continue;
 			}
 
-			//get dat acknowledgement
+			//Recieve acknowledgment packet, throw error if unsuccessfull
 			memset(&ack, 0, sizeof(ack));
 			if((val = recvfrom(sock, (void *) &ack, FILESIZE, 0, (struct sockaddr *) &client, &clientlen)) < 0){
-				err.opC = htons(5);
+				err.opC = htons(ERR_OPC);
 				strcpy(err.errMsg, "Acknowledgement error\n");
 				if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 					perror("Error packet failed to send");
 				}
 			}
-			ack.blockNr = htons(nextBlock);	
-			ack.opC = ntohs(4);
+			//Set the blocknumber of the acknowledgment to the next block
+			ack.opC = ntohs(ACK_OPC);
+			ack.blockNr = htons(nextBlock);
 			ack.blockNr = ntohs(ack.blockNr);
-			if(ntohs(ack.opC) == 4 && ack.blockNr == nextBlock){
-				fflush(stdout);
+			//Check if the blocknumber of the acknowledgment packet is equal to the next block, if successfull, increment nextBlock
+			if(ntohs(ack.opC) == ACK_OPC && ack.blockNr == nextBlock){
 				nextBlock++;
 				isReading = true;
-				//printf("%d", fDataRead);
+				//Check if server has reached last block of byte to transfer
 				if(fDataRead < FILESIZE){
-					//fflush(stdout);
 					break;
 				}
 			}
-			else if(ntohs(ack.opC) != 4 || ack.blockNr != nextBlock){
-				err.opC = htons(5);
+			//Otherwise throw acknowledgment error
+			else if(ntohs(ack.opC) != ACK_OPC || ack.blockNr != nextBlock){
+				err.opC = htons(ERR_OPC);
 				strcpy(err.errMsg, "Acknowledgement error\n");
 				if((val = sendto(sock, (void *) &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 					perror("Error packet failed to send");
 				}
 			}
 		}
+		//Close file, transfer was successfull
 		fclose(filep);
 		printf("File sent to %s:%d!\n", clientIP, sPort);
 		fflush(stdout);
