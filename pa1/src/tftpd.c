@@ -251,4 +251,3 @@ bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, st
 	}
 	return true;
 }
-
