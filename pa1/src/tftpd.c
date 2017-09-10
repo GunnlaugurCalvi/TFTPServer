@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 		//Get Ip address of client, and which port the client is using
 		char *clientIP = inet_ntoa(client.sin_addr);
 		unsigned short cPort = ntohs(client.sin_port);
-		fprintf(stdout, "file '%s' requested from %s:%d\n", request.fileName, clientIP, cPort);
+		fprintf(stdout, "File '%s' requested from %s:%d\n", request.fileName, clientIP, cPort);
 		fflush(stdout);
 
 		//Open the requested file according to what the client requires, throw error if it is "mail"
