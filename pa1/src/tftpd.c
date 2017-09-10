@@ -132,8 +132,18 @@ int main(int argc, char *argv[])
 		memset(&fullPath, 0, sizeof(fullPath));
 		strcpy(fullPath, res);
 		strcat(fullPath, "/");
-		strcat(fullPath, request.fileName);	
-		
+		strcat(fullPath, request.fileName);
+	
+		if(strstr(fullPath, "/..") != NULL || strstr(fullPath, res) != NULL){
+			err.opCode = htons(ERR_OPC);
+			err.errCode = ERROR_ACCESS_VIOLATION;
+			strcpy(err.errMsg, "You cannot reach this file!\n");
+			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+				perror("Error packet failed to send\n");
+			}
+			continue;
+		} 	
+			
 		//Get Ip address of client, and which port the client is using
 		char *clientIP = inet_ntoa(client.sin_addr);
 		unsigned short cPort = ntohs(client.sin_port);
