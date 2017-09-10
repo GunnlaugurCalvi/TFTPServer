@@ -50,7 +50,7 @@ struct ACK{
 	short blockNr;
 };
 
-void getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, int val);
+bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, int val);
 
 int main(int argc, char *argv[])
 {
@@ -114,11 +114,14 @@ int main(int argc, char *argv[])
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("Error packet failed to send\n");
 			}
+			continue;
 		}
 			
 		 
 		//Check if request from client is valid, get mode if request is valid, otherwise throw error
-		getOpCode(&request, &err, sock, &client, clientlen, val);
+		if(!getOpCode(&request, &err, sock, &client, clientlen, val)){
+			continue;
+		}
 
 		//Allocate memory for fullpath to file, concat fullpath with filename of request from client	
 		memset(&fullPath, 0, sizeof(fullPath));
@@ -156,13 +159,14 @@ int main(int argc, char *argv[])
 			if((val = sendto(sock,  &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("Error packet failed to send\n");
 			}
+			continue;
 		}
 		//Check if opening the file was successfull, throw error if not
 		if(!filep){
 			err.opCode = htons(ERR_OPC);
 			strcpy(err.errMsg, "Failed to read file\n"); 
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-				perror("Error packet failed to send");
+				perror("Error packet failed to send\n");
 			}
 			continue; 
 		}
@@ -232,7 +236,7 @@ int main(int argc, char *argv[])
 			
 	return 0;
 }
-void getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, int val){
+bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, int val){
 	if(ntohs(clientRequest->opCode) == RRQ_OPC){
 		strncpy(clientRequest->mode, strchr(clientRequest->fileName, '\0') + 1, sizeof(clientRequest->mode));
 	}
@@ -243,6 +247,8 @@ void getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, st
 		if((val = sendto(sock, &errorblock, sizeof(errorblock->errMsg) + 4, 0, (struct sockaddr *) &client, clength)) < 0){
 			perror("Error packet failed to send\n");
 		}
+		return false;
 	}
+	return true;
 }
 
