@@ -50,7 +50,7 @@ struct ACK{
 	short blockNr;
 };
 
-bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, int val);
+bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, ssize_t val);
 
 int main(int argc, char *argv[])
 {
@@ -58,6 +58,8 @@ int main(int argc, char *argv[])
 	int sock;
 	struct sockaddr_in server, client;
 	int portNumber;
+	ssize_t val;
+	int fDataRead;
 	struct DATA data;
 	struct ACK ack;
 	struct RRQ request;
@@ -99,8 +101,7 @@ int main(int argc, char *argv[])
 	}
 
 	while(true){
-		ssize_t val;
-		int fDataRead = 0;
+		fDataRead = 0;
 		nextBlock = 1;	
 		//Allocate memory for request from client
 		memset(&request, 0, sizeof(request));		
@@ -111,8 +112,9 @@ int main(int argc, char *argv[])
 			err.opCode = htons(ERR_OPC);
 			err.errCode = ERROR_NOT_DEFINED ;
 			strcpy(err.errMsg, "Request failed\n");
+		
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-				perror("Error packet failed to send\n");
+				perror("[RECV]: Error packet failed to send\n");
 			}
 			continue;
 		}
@@ -133,8 +135,9 @@ int main(int argc, char *argv[])
 			err.opCode = htons(ERR_OPC);
 			err.errCode = ERROR_ACCESS_VIOLATION;
 			strcpy(err.errMsg, "You cannot reach this file!\n");
+		
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-				perror("Error packet failed to send\n");
+				perror("[PATH]: Error packet failed to send\n");
 			}
 			continue;
 		}	
@@ -156,8 +159,9 @@ int main(int argc, char *argv[])
 			err.opCode = htons(ERR_OPC);
 			err.errCode = ERROR_ILLEGAL_TFTP_OP;
 			strcpy(err.errMsg, "Mail mode not supported\n");
+		
 			if((val = sendto(sock,  &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-				perror("Error packet failed to send\n");
+				perror("[MODE]: Error packet failed to send\n");
 			}
 			continue;
 		}
@@ -165,8 +169,9 @@ int main(int argc, char *argv[])
 		if(!filep){
 			err.opCode = htons(ERR_OPC);
 			strcpy(err.errMsg, "Failed to read file\n"); 
+		
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-				perror("Error packet failed to send\n");
+				perror("[FILE]: Error packet failed to send\n");
 			}
 			continue; 
 		}
@@ -179,6 +184,7 @@ int main(int argc, char *argv[])
 			//Set op code and block number for the data packet
 			data.opCode = htons(DATA_OPC);
 			data.blockNr = htons(nextBlock);
+			
 			//Check if the file is still being read for transfer
 			if(transfering){
 				//Allocate memory for the pack being transmitted and read into fDataRead
@@ -189,9 +195,10 @@ int main(int argc, char *argv[])
 			//Send the data packet, throw error if unsuccessfull
 			if((val = sendto(sock, &data, (size_t) fDataRead + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				err.opCode = htons(ERR_OPC);
-				strcpy(err.errMsg, "Failed sending file");
+				strcpy(err.errMsg, "Failed sending file\n");
+		
 				if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-					perror("Error packet failed to send");
+					perror("[DATA]: Error packet failed to send\n");
 				}  	
 				continue;
 			}
@@ -201,8 +208,9 @@ int main(int argc, char *argv[])
 			if((val = recvfrom(sock, (void *) &ack, FILESIZE, 0, (struct sockaddr *) &client, &clientlen)) < 0){
 				err.opCode = htons(ERR_OPC);
 				strcpy(err.errMsg, "Acknowledgement error\n");
+		
 				if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-					perror("Error packet failed to send");
+					perror("[ACK]: Error packet failed to send\n");
 				}
 			}
 			//Set the blocknumber of the acknowledgment to the next block
@@ -213,30 +221,34 @@ int main(int argc, char *argv[])
 			if(ntohs(ack.opCode) == ACK_OPC && ack.blockNr == nextBlock){
 				nextBlock++;
 				transfering = true;
+		
 				//Check if server has reached last block of byte to transfer
 				if(fDataRead < FILESIZE){
 					break;
 				}
 			}
+
 			//Otherwise throw acknowledgment error
 			else if(ntohs(ack.opCode) != ACK_OPC || ack.blockNr != nextBlock){
 				err.opCode = htons(ERR_OPC);
 				strcpy(err.errMsg, "Acknowledgement error\n");
-				if((val = sendto(sock, (void *) &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
-					perror("Error packet failed to send");
+		
+				if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
+					perror("[ACK]: Error packet failed to send\n");
 				}
 			}
 		}
+
 		//Close file, transfer was successfull
 		fclose(filep);
 		printf("File sent to %s:%d!\n", clientIP, cPort);
 		fflush(stdout);
 						
-	}
-			
+	}	
 	return 0;
 }
-bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, int val){
+bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, ssize_t val){
+	
 	if(ntohs(clientRequest->opCode) == RRQ_OPC){
 		strncpy(clientRequest->mode, strchr(clientRequest->fileName, '\0') + 1, sizeof(clientRequest->mode));
 	}
@@ -245,7 +257,7 @@ bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, st
 		errorblock->errCode = ERROR_ILLEGAL_TFTP_OP;
 		strcpy(errorblock->errMsg, "Illegal TFTP operation\n");
 		if((val = sendto(sock, &errorblock, sizeof(errorblock->errMsg) + 4, 0, (struct sockaddr *) &client, clength)) < 0){
-			perror("Error packet failed to send\n");
+			perror("[RRQ]: Error packet failed to send\n");
 		}
 		return false;
 	}
