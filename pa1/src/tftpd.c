@@ -96,8 +96,8 @@ int main(int argc, char *argv[])
 
 	//Bind Socket to socket address, exit if fail
 	if(bind(sock, (struct sockaddr *) &server, sizeof(struct sockaddr_in)) < 0){
-	    	perror("Bind error");
-			exit(EXIT_FAILURE);
+		perror("Bind error");
+		exit(EXIT_FAILURE);
 	}
 
 	while(true){
