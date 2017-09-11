@@ -51,7 +51,6 @@ struct ACK{
 };
 
 bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, struct sockaddr_in *client, socklen_t clength, ssize_t val);
-void errorHandler(struct ERROR* error, int sock, int ErrOp, int ErrCode, char msg[FILESIZE], struct sockaddr_in *client, socklen_t clength, ssize_t val);
 
 int main(int argc, char *argv[])
 {
@@ -133,14 +132,13 @@ int main(int argc, char *argv[])
 		strcat(fullPath, request.fileName);
 
 		if(strstr(fullPath, "/..") != NULL || strstr(fullPath, res) == NULL){
-			/*err.opCode = htons(ERR_OPC);
+			err.opCode = htons(ERR_OPC);
 			err.errCode = ERROR_ACCESS_VIOLATION;
 			strcpy(err.errMsg, "You cannot reach this file!\n");
 
 			if((val = sendto(sock, &err, sizeof(err.errMsg) + 4, 0, (struct sockaddr *) &client, clientlen)) < 0){
 				perror("[PATH]: Error packet failed to send\n");
-			}*/
-			errorHandler(&err, sock, ERR_OPC, ERROR_ACCESS_VIOLATION, "You cannot reach this file!\n", &client, clientlen, val);
+			}
 			continue;
 		}
 
@@ -264,14 +262,4 @@ bool getOpCode(struct RRQ *clientRequest, struct ERROR *errorblock, int sock, st
 		return false;
 	}
 	return true;
-}
-
-void errorHandler(struct ERROR* error, int sock, int ErrOp, int ErrCode, char msg[FILESIZE], struct sockaddr_in *client, socklen_t clength, ssize_t val){
-	error->opCode = htons(ErrOp);
-	error->errCode = ErrCode;
-	strcpy(error->errMsg, msg);
-
-	if((val = sendto(sock, &error, sizeof(error->errMsg) + 4, 0, (struct sockaddr *) &client, clength)) < 0){
-		perror("Error packet failed to send\n");
-	}
 }
